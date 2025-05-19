@@ -1,24 +1,33 @@
-from fastapi import FastAPI
-from fast_flights import get_flights, FlightData, Passengers
+from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
+import logging
+from flights import search_flights
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+@app.get("/")
+def read_root():
+    return {"message": "✅ API pronta. Usa /search per cercare voli."}
+
 @app.get("/search")
-def search_flights(origin: str, destination: str, date: str):
+def search(
+    origin: str = Query(..., description="Codice IATA aeroporto di partenza (es. BRI)"),
+    destination: str = Query(..., description="Codice IATA aeroporto di arrivo (es. STN)"),
+    date: str = Query(..., description="Data in formato YYYY-MM-DD")
+):
+    logger.info("📡 Chiamata ricevuta a /search con:")
+    logger.info(f"✈️ origin: {origin}")
+    logger.info(f"🎯 destination: {destination}")
+    logger.info(f"📅 date: {date}")
+
     try:
-        flight_data = FlightData(
-            from_airport=origin,
-            to_airport=destination,
-            date=date
-        )
-        passengers = Passengers(adults=1)
-        result = get_flights(
-            flight_data=[flight_data],
-            trip="one-way",
-            seat="economy",
-            passengers=passengers,
-            fetch_mode="fallback"
-        )
-        return {"status": "ok", "results": result}
+        results = search_flights(origin, destination, date)
+        logger.info(f"✅ {len(results)} risultati trovati.")
+        return JSONResponse(content=results)
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logger.error(f"❌ Errore durante la ricerca: {str(e)}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
