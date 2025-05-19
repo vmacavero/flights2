@@ -1,13 +1,24 @@
 from fastapi import FastAPI
-from flights.main import find_flights
+from fast_flights import get_flights, FlightData, Passengers
 
 app = FastAPI()
 
 @app.get("/search")
 def search_flights(origin: str, destination: str, date: str):
     try:
-        # Esegui la ricerca voli con i parametri forniti
-        results = find_flights(origin=origin, destination=destination, date=date)
-        return {"status": "ok", "results": results}
+        flight_data = FlightData(
+            from_airport=origin,
+            to_airport=destination,
+            date=date
+        )
+        passengers = Passengers(adults=1)
+        result = get_flights(
+            flight_data=[flight_data],
+            trip="one-way",
+            seat="economy",
+            passengers=passengers,
+            fetch_mode="fallback"
+        )
+        return {"status": "ok", "results": result}
     except Exception as e:
         return {"status": "error", "message": str(e)}
